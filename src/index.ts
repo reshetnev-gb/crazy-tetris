@@ -1,5 +1,6 @@
+import type {Tetris} from 'core/tetris/types';
 import TetrisImpl from 'core/tetris/tetris-impl';
-import type {Figure, Tetris} from 'core/tetris/types';
+import figureFactoryImpl, {FigureValue} from 'core/tetris/figures/figure-factory-impl';
 
 type Pixel = {
     x: number;
@@ -39,7 +40,7 @@ function createCanvas(rows: number, cols: number, pixel: number): Canvas {
     const pixels = [];
     for (let i = 0; i < rows; i++) {
         for (let j = 0; j < cols; j++) {
-            const pixel = createPixel(i, j);
+            const pixel = createPixel(j, i);
             canvasElement.appendChild(pixel.element);
             pixels.push(pixel);
         }
@@ -51,12 +52,16 @@ function createCanvas(rows: number, cols: number, pixel: number): Canvas {
     };
 }
 
-function drawTetris(canvas: Canvas, tetris: Tetris): void {
+function drawTetris(canvas: Canvas, tetris: Tetris<FigureValue>): void {
     for (const pixel of canvas.pixels) {
-        const isFieldPixel = tetris.getValue(pixel) !== undefined;
-        const isFigurePixel = tetris.figure.points.find((point) => point.x === pixel.x && point.y === pixel.y);
+        const value = tetris.getValue(pixel);
 
-        pixel.element.style.background = isFieldPixel ? 'white' : isFigurePixel ? 'red' : 'black';
+        if (value) {
+            pixel.element.innerHTML = '';
+            pixel.element.appendChild(value);
+        } else if (pixel.element.children.length !== 0) {
+            pixel.element.innerHTML = '';
+        }
     }
 }
 
@@ -74,99 +79,21 @@ function initKeyboard(tetris: Tetris): void {
     });
 }
 
-const ROWS = 10;
+const ROWS = 20;
 const COLS = 10;
 const PIXEL = 20;
-const FIGURES: Figure[] = [
-    // O
-    {
-        rotationDegrees: [],
-        points: [
-            {x: 0, y: 0, value: {}},
-            {x: 1, y: 0, value: {}},
-            {x: 0, y: 1, value: {}},
-            {x: 1, y: 1, value: {}}
-        ]
-    }
-    // // I
-    // {
-    //     rotationDegrees: [90, -90],
-    //     points: [
-    //         {x: 0, y: 0, value: {}},
-    //         {x: 0, y: 1, value: {}},
-    //         {x: 0, y: 2, value: {}},
-    //         {x: 0, y: 3, value: {}}
-    //     ]
-    // },
-    // // S
-    // {
-    //     rotationDegrees: [90],
-    //     points: [
-    //         {x: 0, y: 1, value: {}},
-    //         {x: 1, y: 1, value: {}},
-    //         {x: 1, y: 0, value: {}},
-    //         {x: 2, y: 0, value: {}}
-    //     ]
-    // },
-    // // Z
-    // {
-    //     rotationDegrees: [90],
-    //     points: [
-    //         {x: 0, y: 0, value: {}},
-    //         {x: 1, y: 0, value: {}},
-    //         {x: 1, y: 1, value: {}},
-    //         {x: 2, y: 1, value: {}}
-    //     ]
-    // },
-    // // L
-    // {
-    //     rotationDegrees: [90],
-    //     points: [
-    //         {x: 0, y: 0, value: {}},
-    //         {x: 0, y: 1, value: {}},
-    //         {x: 0, y: 2, value: {}},
-    //         {x: 1, y: 2, value: {}}
-    //     ]
-    // },
-    // // J
-    // {
-    //     rotationDegrees: [90],
-    //     points: [
-    //         {x: 1, y: 0, value: {}},
-    //         {x: 1, y: 1, value: {}},
-    //         {x: 1, y: 2, value: {}},
-    //         {x: 0, y: 2, value: {}}
-    //     ]
-    // },
-    // // T
-    // {
-    //     rotationDegrees: [90],
-    //     points: [
-    //         {x: 0, y: 0, value: {}},
-    //         {x: 1, y: 0, value: {}},
-    //         {x: 2, y: 0, value: {}},
-    //         {x: 1, y: 1, value: {}}
-    //     ]
-    // }
-];
 
 function main(): void {
     const canvas = createCanvas(ROWS, COLS, PIXEL);
-    const tetris = new TetrisImpl<unknown>({
+    const tetris = new TetrisImpl<FigureValue>({
         rows: ROWS,
         cols: COLS,
-        figureFactory: {
-            create: () => {
-                const randomIndex = Math.floor(Math.random() * (FIGURES.length - 1));
-                const figure = FIGURES[randomIndex];
-                return figure;
-            }
-        }
+        figureFactory: figureFactoryImpl
     });
 
     setInterval(() => {
         tetris.moveDown();
-    }, 500);
+    }, 400);
 
     initKeyboard(tetris);
 
@@ -177,4 +104,5 @@ function main(): void {
     requestAnimationFrame(draw);
 }
 
+// TODO: add tests
 main();

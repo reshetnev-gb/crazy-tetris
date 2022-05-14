@@ -1,17 +1,10 @@
-import {Tetris, Figure, Field, Point, PositionPoint} from './types';
-
-interface FigureFactory<T> {
-    create: () => Figure<T>;
-}
+import type {Tetris, Field, PositionPoint} from 'core/tetris/types';
+import type {Figure, FigureFactory} from 'core/tetris/figures/types';
 
 interface TetrisImplParams<T> {
     rows: number;
     cols: number;
     figureFactory: FigureFactory<T>;
-}
-
-function degToRad(degree: number): number {
-    return (degree * Math.PI) / 180;
 }
 
 class TetrisImpl<T> implements Tetris<T> {
@@ -21,8 +14,8 @@ class TetrisImpl<T> implements Tetris<T> {
 
     constructor(params: TetrisImplParams<T>) {
         this._params = params;
-        this._currentFigure = this._createFigure();
         this._field = this._createField();
+        this._currentFigure = this._createFigure();
     }
 
     private _createField(): Field<T> {
@@ -30,75 +23,12 @@ class TetrisImpl<T> implements Tetris<T> {
             const row = new Array(this._params.cols).fill(undefined);
             return row;
         });
-
         return field;
     }
 
     private _createFigure(): Figure<T> {
-        const figure = this._params.figureFactory.create();
-
-        const deltaX = Math.floor((this._params.cols - 1) / 2);
-
-        const movedFigure = this._moveFigure(figure, deltaX, 0);
-        return movedFigure;
-    }
-
-    private _setToField(figure: Figure<T>): void {
-        figure.points.forEach((point) => {
-            this._field[point.y][point.x] = point.value;
-        });
-    }
-
-    private _rotate(figure: Figure<T>): Figure<T> {
-        const degree = figure.rotationDegrees.shift();
-        if (degree === undefined) {
-            return figure;
-        }
-        figure.rotationDegrees.push(degree);
-
-        const rotatePoint = figure.points[Math.floor((figure.points.length - 1) / 2)];
-        const radian = degToRad(degree);
-        const cos = Math.round(Math.cos(radian));
-        const sin = Math.floor(Math.sin(radian));
-
-        return {
-            ...figure,
-            points: figure.points.map((point) => {
-                const x = (point.x - rotatePoint.x) * cos - (point.y - rotatePoint.y) * sin + rotatePoint.x;
-                const y = (point.x - rotatePoint.x) * sin + (point.y - rotatePoint.y) * cos + rotatePoint.y;
-
-                return {
-                    ...point,
-                    x,
-                    y
-                };
-            })
-        };
-    }
-
-    private _moveFigure(figure: Figure<T>, deltaX: number, deltaY: number): Figure<T> {
-        return {
-            ...figure,
-            points: figure.points.map((point) => ({
-                ...point,
-                x: point.x + deltaX,
-                y: point.y + deltaY
-            }))
-        };
-    }
-
-    private _hasIntersections(figure: Figure<T>): boolean {
-        return figure.points.some((point) => {
-            const hasBoundsIntersection =
-                point.y < 0 || point.y > this._params.rows - 1 || point.x < 0 || point.x > this._params.cols - 1;
-
-            if (hasBoundsIntersection) {
-                return true;
-            }
-
-            const hasInFieldIntersection = this._field[point.y][point.x];
-            return hasInFieldIntersection;
-        });
+        const figure = this._params.figureFactory.create(this._field);
+        return figure;
     }
 
     private _checkOverflow(): boolean {
@@ -112,57 +42,53 @@ class TetrisImpl<T> implements Tetris<T> {
             return new Array(this._params.cols).fill(undefined);
         };
 
-        for (const row of this._field) {
+        let i = this._field.length - 1;
+        while (i >= 0) {
+            const row = this._field[i];
             const isFilledRow = row.every((cell) => cell !== undefined);
             if (isFilledRow) {
+                this._field.splice(i, 1);
                 this._field.unshift(createRow());
-                this._field.pop();
+                continue;
             }
+            i--;
         }
-    }
-
-    get figure(): Figure<T> {
-        return this._currentFigure;
     }
 
     getValue(position: PositionPoint): T | undefined {
         const fieldValue = this._field[position.y][position.x];
-        return fieldValue;
+        const figureValue = this._currentFigure.points.find(
+            (point) => point.x === position.x && point.y === position.y
+        )?.value;
+
+        return fieldValue || figureValue;
     }
 
     rotate(): void {
-        const rotatedFigure = this._rotate(this._currentFigure);
-        if (!this._hasIntersections(rotatedFigure)) {
-            this._currentFigure = rotatedFigure;
-        }
+        this._currentFigure.rotate();
     }
 
     moveLeft(): void {
-        const movedFigure = this._moveFigure(this._currentFigure, -1, 0);
-        if (!this._hasIntersections(movedFigure)) {
-            this._currentFigure = movedFigure;
-        }
+        this._currentFigure.moveLeft();
     }
 
     moveRight(): void {
-        const movedFigure = this._moveFigure(this._currentFigure, 1, 0);
-        if (!this._hasIntersections(movedFigure)) {
-            this._currentFigure = movedFigure;
-        }
+        this._currentFigure.moveRight();
     }
 
     moveDown(): void {
-        const movedFigure = this._moveFigure(this._currentFigure, 0, 1);
-        if (!this._hasIntersections(movedFigure)) {
-            this._currentFigure = movedFigure;
-        } else {
-            this._setToField(this._currentFigure);
-            if (this._checkOverflow()) {
-                window.location.reload();
-            }
-            this._removeFilledRows();
-            this._currentFigure = this._createFigure();
+        this._currentFigure.moveDown();
+        if (this._currentFigure.active) {
+            return;
         }
+
+        this._currentFigure.setToField();
+        this._removeFilledRows();
+        if (this._checkOverflow()) {
+            window.alert("Let's start new game !");
+            this._field = this._createField();
+        }
+        this._currentFigure = this._createFigure();
     }
 }
 

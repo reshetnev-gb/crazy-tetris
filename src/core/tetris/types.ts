@@ -14,8 +14,6 @@ type Figure<T = unknown> = {
 type Field<T = unknown> = (T | undefined)[][];
 
 interface Tetris<T = unknown> {
-    get figure(): Figure<T>; // Удалить в пользу getValue()
-
     getValue(position: PositionPoint): T | undefined;
 
     rotate(): void;
