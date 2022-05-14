@@ -4,9 +4,20 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Vite App</title>
+        <style>
+            #canvas {
+                width: 400px;
+                height: 400px;
+                background: black;
+                position: relative;
+                box-sizing: content-box;
+                border: 2px solid blue;
+            }
+        </style>
     </head>
     <body>
         <div id="root"></div>
+        <div id="canvas"></div>
         <script type="module" src="/src/index.ts"></script>
     </body>
 </html>
